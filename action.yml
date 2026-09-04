@@ -1,0 +1,76 @@
+name: Claude PR Review Bot
+description: >-
+  Reviews a pull request with Claude and posts the findings as one review of inline comments.
+  It only ever comments: it cannot approve, request changes, or block a merge.
+author: Juan Gómez
+branding:
+  icon: message-square
+  color: purple
+
+inputs:
+  anthropic-api-key:
+    description: >-
+      Anthropic API key. Leave empty and the bot runs the whole pipeline against fixture
+      findings in dry-run mode, posting nothing. Useful for trying the action before buying in.
+    required: false
+    default: ""
+  github-token:
+    description: "Token with pull-requests: write. The workflow's default token is enough."
+    required: false
+    default: ${{ github.token }}
+  pull-request:
+    description: Pull request number. Defaults to the pull request that triggered the workflow.
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  model:
+    description: Claude model id.
+    required: false
+    default: claude-opus-5
+  max-findings:
+    description: Cap on inline comments per review. Blockers are kept first.
+    required: false
+    default: "15"
+  ignore-globs:
+    description: >-
+      Extra file globs to skip, comma-separated, on top of the built-in lockfile / generated-code list.
+      Example: "docs/**, *.snap".
+    required: false
+    default: ""
+  project-context:
+    description: >-
+      Repository conventions appended to the system prompt, e.g. "Orders API on .NET 10; DTOs are
+      records; never catch Exception". Keep it stable: it is part of the cached prefix.
+    required: false
+    default: ""
+  dry-run:
+    description: Run everything except the POST. The rendered review goes to the job log instead.
+    required: false
+    default: "false"
+  dotnet-version:
+    description: .NET SDK version passed to actions/setup-dotnet.
+    required: false
+    default: 10.0.x
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    # Builds from source on every run (about a minute, cached NuGet aside). That is a deliberate
+    # trade for transparency: what reviews your code is exactly what is in this repository at
+    # the ref you pinned, not an opaque image.
+    - name: Review the pull request
+      shell: bash
+      run: dotnet run --project "${{ github.action_path }}/src/ClaudeReviewBot/ClaudeReviewBot.csproj" -c Release --
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ inputs.pull-request }}
+        CLAUDE_MODEL: ${{ inputs.model }}
+        MAX_FINDINGS: ${{ inputs.max-findings }}
+        IGNORE_GLOBS: ${{ inputs.ignore-globs }}
+        PROJECT_CONTEXT: ${{ inputs.project-context }}
+        DRY_RUN: ${{ inputs.dry-run }}

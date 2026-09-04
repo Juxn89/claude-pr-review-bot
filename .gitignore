@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+
+# Test results / coverage
+TestResults/
+coverage/
+*.trx
+
+# Local secrets and env files. Never commit an API key.
+.env
+.env.*
+*.local.json

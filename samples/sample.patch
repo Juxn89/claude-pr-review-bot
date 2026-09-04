@@ -1,0 +1,82 @@
+diff --git a/src/Aurora.Orders.Api/Orders/OrderService.cs b/src/Aurora.Orders.Api/Orders/OrderService.cs
+index 3f1c2a9..8b7d4e1 100644
+--- a/src/Aurora.Orders.Api/Orders/OrderService.cs
++++ b/src/Aurora.Orders.Api/Orders/OrderService.cs
+@@ -12,6 +12,7 @@ public sealed class OrderService(IOrderRepository repository, ILogger<OrderServi
+ {
+     private readonly IOrderRepository _repository = repository;
+     private readonly ILogger<OrderService> _logger = logger;
++    private readonly Dictionary<string, Order> _cache = new();
+
+     public async Task<Order?> GetAsync(string orderId, CancellationToken cancellationToken)
+     {
+@@ -18,2 +19,13 @@ public sealed class OrderService(IOrderRepository repository, ILogger<OrderServi
+-        return await _repository.FindAsync(orderId, cancellationToken);
++        if (_cache.TryGetValue(orderId, out Order? cached))
++        {
++            return cached;
++        }
++
++        Order? order = await _repository.FindAsync(orderId, cancellationToken);
++        if (order is not null)
++        {
++            _cache[orderId] = order;
++        }
++
++        return order;
+     }
+diff --git a/src/Aurora.Orders.Api/Payments/PaymentsClient.cs b/src/Aurora.Orders.Api/Payments/PaymentsClient.cs
+index 91ad0c2..c4e7f33 100644
+--- a/src/Aurora.Orders.Api/Payments/PaymentsClient.cs
++++ b/src/Aurora.Orders.Api/Payments/PaymentsClient.cs
+@@ -38,11 +38,18 @@ public sealed class PaymentsClient(HttpClient http, ILogger<PaymentsClient> logg
+     }
+
+     /// <summary>Charges the card and returns the processor's decision.</summary>
+     public async Task<PaymentResult> ChargeAsync(ChargeRequest request, CancellationToken cancellationToken)
+     {
+-        using HttpResponseMessage response = await http.PostAsJsonAsync("charges", request, cancellationToken);
+-        response.EnsureSuccessStatusCode();
+-        return (await response.Content.ReadFromJsonAsync<PaymentResult>(cancellationToken))!;
++        try
++        {
++            using HttpResponseMessage response = await http.PostAsJsonAsync("charges", request, cancellationToken);
++            response.EnsureSuccessStatusCode();
++            return (await response.Content.ReadFromJsonAsync<PaymentResult>(cancellationToken))!;
++        }
++        catch (Exception)
++        {
++            return PaymentResult.Declined;
++        }
+     }
+
+ }
+diff --git a/src/Aurora.Orders.Api/Program.cs b/src/Aurora.Orders.Api/Program.cs
+index 7e2b1aa..d09f4c8 100644
+--- a/src/Aurora.Orders.Api/Program.cs
++++ b/src/Aurora.Orders.Api/Program.cs
+@@ -22,6 +22,9 @@ builder.Services.AddHttpClient<PaymentsClient>(client =>
+ {
+     client.BaseAddress = new Uri(builder.Configuration["Payments:BaseUrl"]!);
++    string apiKey = builder.Configuration["Payments:ApiKey"]!;
++    client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
++    Console.WriteLine($"Payments client configured with key {apiKey}");
+ });
+
+ WebApplication app = builder.Build();
+ app.MapOrderEndpoints();
+diff --git a/src/Aurora.Orders.Api/packages.lock.json b/src/Aurora.Orders.Api/packages.lock.json
+index 5a1e9d0..2c8b7f4 100644
+--- a/src/Aurora.Orders.Api/packages.lock.json
++++ b/src/Aurora.Orders.Api/packages.lock.json
+@@ -3,8 +3,8 @@
+   "dependencies": {
+     "net10.0": {
+       "Microsoft.Extensions.Http": {
+         "type": "Direct",
+-        "requested": "[10.0.0, )",
+-        "resolved": "10.0.0",
++        "requested": "[10.0.1, )",
++        "resolved": "10.0.1",
+         "contentHash": "kX0a9m0T3j+6l9Q1x3w6V8y2N4c7B1e5F9gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ1a2B3c4D5e6F7g8H9i0J1k2L3=="
+       },

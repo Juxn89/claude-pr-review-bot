@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClaudeReviewBot.Core\ClaudeReviewBot.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>claude-review</AssemblyName>
+    <RootNamespace>ClaudeReviewBot</RootNamespace>
+  </PropertyGroup>
+
+</Project>

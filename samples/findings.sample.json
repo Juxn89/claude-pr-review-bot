@@ -1,0 +1,52 @@
+{
+  "findings": [
+    {
+      "path": "src/Aurora.Orders.Api/Orders/OrderService.cs",
+      "line": 15,
+      "severity": "blocker",
+      "comment": "`_cache` is a plain `Dictionary` on a service that handles concurrent requests. Concurrent `TryGetValue` and indexer writes corrupt the table and can hang a reader. Use `ConcurrentDictionary<string, Order>` or `IMemoryCache`, and give entries an expiry: this cache never invalidates, so an order updated elsewhere is served stale forever."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Payments/PaymentsClient.cs",
+      "line": 49,
+      "severity": "blocker",
+      "comment": "`catch (Exception)` turns a timeout, a 5xx and a deserialization bug into 'declined'. The customer sees a decline while the card may already have been charged, and nothing is logged. Catch `HttpRequestException` and `TaskCanceledException` only, log with the request id, and surface a distinct `PaymentResult.Unavailable` so the caller can retry or queue."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Program.cs",
+      "line": 26,
+      "severity": "blocker",
+      "comment": "This writes the payments API key to stdout, which in most hosts is shipped to a log aggregator. Remove the line; if you need to confirm configuration at startup, log the key's length or a fingerprint, never the value."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Program.cs",
+      "line": 25,
+      "severity": "consider",
+      "comment": "Setting the key on `DefaultRequestHeaders` at registration means a rotated secret needs a restart. A small `DelegatingHandler` that reads `IOptionsMonitor<PaymentsOptions>` per request picks up rotation for free."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Program.cs",
+      "line": 24,
+      "severity": "nit",
+      "comment": "The null-forgiving `!` hides a missing `Payments:ApiKey` until the first charge. Bind a `PaymentsOptions` class with `ValidateDataAnnotations().ValidateOnStart()` so the app refuses to boot without it."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Orders/OrderService.cs",
+      "line": 13,
+      "severity": "nit",
+      "comment": "This line is context, not an addition; the filter should drop this finding because GitHub would reject it with a 422."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/Program.cs",
+      "line": 26,
+      "severity": "nit",
+      "comment": "Duplicate anchor on purpose: the filter keeps the first (highest-severity) finding per line and drops this one."
+    },
+    {
+      "path": "src/Aurora.Orders.Api/packages.lock.json",
+      "line": 7,
+      "severity": "nit",
+      "comment": "Lockfiles are skipped before Claude ever sees them, so a finding here is always outside the diff and gets dropped."
+    }
+  ]
+}

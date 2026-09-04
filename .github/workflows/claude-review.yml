@@ -1,0 +1,29 @@
+# Dogfooding: this repository's own pull requests are reviewed by the action in this repository.
+name: Claude review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      # Under pull_request_target this checks out the BASE branch, i.e. the action's own trusted
+      # code, never the contributor's head commit. The bot reads the PR itself through the API.
+      - uses: actions/checkout@v4
+
+      - uses: ./
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          project-context: >-
+            This repository is the review bot itself: a .NET 10 console app plus a class library.
+            Treat any new capability that lets the bot do more than comment as a blocker.

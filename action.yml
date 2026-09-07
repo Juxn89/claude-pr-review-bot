@@ -1,6 +1,5 @@
-name: Claude PR Review Bot
-description: >-
-  Reviews a pull request with Claude and posts the findings as one review of inline comments.
+name: PR Review Botdescription: >-
+  Reviews pull requests and posts findings as inline comments. Comments only; never approves or blocks.
   It only ever comments: it cannot approve, request changes, or block a merge.
 author: Juan Gómez
 branding:
